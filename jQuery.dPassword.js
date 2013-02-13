@@ -46,16 +46,17 @@
  *
  * @requires jQuery Library >= 1.3.2 (may work with older versions)
  */
-(function() {
+(function($) {
 	jQuery.fn.dPassword = function(options) {
 		
 		// support multiple elements
-	    if (this.length > 1) {
-	        this.each(function() {jQuery(this).dPassword(options);});
-	        return this;
-	    }
-    
-		var options = jQuery.extend(defaultOptions, options);
+		if (this.length > 1) {
+			this.each(function() {jQuery(this).dPassword(options);});
+			return this;
+		}
+
+		var _options;
+		var options = jQuery.extend(_options, defaultOptions, options);
 		this.options = options;
 		options.cloakingCharacter = options.cloakingCharacter.charAt(0);
 
