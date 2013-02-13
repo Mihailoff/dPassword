@@ -21,7 +21,8 @@
  *
  * Copyright (c) 2009 Stefan Ullrich, DECAF° | http://decaf.de
  *                    Dirk Schürjohann, DECAF° | http://decaf.de
- *                    Julian Dreissig
+ *                    Julian Dreissig,
+ *                    George Mihailoff, http://george.mihailoff.com/
  *
  * Permission is hereby granted, free of charge, to any person obtaining 
  * a copy of this software and associated documentation files (the "Software"), 
@@ -55,8 +56,10 @@
 	    }
     
 		var options = jQuery.extend(defaultOptions, options);
+		this.options = options;
 		options.cloakingCharacter = options.cloakingCharacter.charAt(0);
-	
+
+		var self = this;
 		var _input = $(this);
 		var _value = null,
 			_previousInputValue = null,
@@ -73,7 +76,7 @@
 		registerHandlers(_input);
 		if (options.observeForm || options.form) {
 			if (!_form) _form = options.form ? $(options.form) : _input.closest('form');
-			if (_form) _form.bind("submit.dPassword", function(){deactivate(true);});
+			if (_form) _form.bind("submit.dPassword", function(){self.deactivate(true);});
 		}
 
 		// create/handle toggle icon
@@ -82,31 +85,19 @@
 			_toggleIcon.css({backgroundImage: "url(" + (options.iconPath || options.ICON_PATH) + ")"});
 			_toggleIcon.css(options.ICON_STYLES);
 			_toggleIcon.bind("click", function() {
-				_observing ? deactivate() : activate();
+				_observing ? this.deactivate() : this.activate();
 				_input.focus();
 			});
 		}
 
 		// TODO: public methods
 		// TODO: possible to overwrite val() to outside?
-	
- 		activate();
-		return this;
-		
-		// ------- method declarations follow ----------
-	
-		/**
-		 * Returns the current value of the password field.
-		 */
-		function getValue() {
-			return _observing ? _value : _input.val();
-		}
-	
-		/**
+
+                /**
 		 * Switches to active mode. Will be automatically called on initialization.
 		 * Use getValue() to retrieve field value once activated.
 		 */
-		function activate() {
+		this.activate = function() {
 			_observing = true;
 			_value = _input.val();
 			_cloakInput();
@@ -119,7 +110,7 @@
 		 * to e.g. perform DOM operations or value retrieval.
 		 * IMPORTANT: If "temporarily" parameter is set to true will auto-reactivates on any input.
 		 */
-		function deactivate(temporarily) {
+		this.deactivate = function (temporarily) {
 			if (_observing) {
 				if (_timeout) {
 					clearTimeout(_timeout);
@@ -135,6 +126,18 @@
 					if (options.onStateChange) options.onStateChange(_observing, this, _toggleIcon);
 				}
 			}
+		}
+
+ 		this.activate();
+		return this;
+		
+		// ------- method declarations follow ----------
+	
+		/**
+		 * Returns the current value of the password field.
+		 */
+		function getValue() {
+			return _observing ? _value : _input.val();
 		}
 
 		function _keyDownHandler(event) {
@@ -185,12 +188,12 @@
 					sEnd = _previousSelection[1],
 					sLength = _previousSelection[2],
 					lengthDifference = value.length - _value.length,	// > 0: characters added
-					newValue;			
+					newValue;
 				if (lengthDifference < 0 && sLength == 0) {		// single character deletion
 					if (sStart == selection[0])	{				// forward deletion
 						newValue = _value.substring(0, sStart) + _value.substring(sEnd + 1);
 					} else {									// has to be backward deletion
-						newValue = _value.substring(0, selection[0]) + _value.substring(sEnd);
+						newValue = _value.substring(0, value.length);
 					}
 				} else {										// a selection has been replaced/deleted
 					newValue = _value.substring(0, sStart) + value.substring(sStart, selection[1]) + _value.substring(sEnd);
@@ -203,7 +206,7 @@
 					_timeout = null;
 				}
 
-				if (lengthDifference >= 0) {
+				if (lengthDifference != 0) {
 					// leave newly written part uncloaked
 					_cloakInput([sStart + 1, selection[1]]);
 					_timeout = setTimeout(_cloakInput, options.delay * 1000);
@@ -218,14 +221,14 @@
 			element.bind("keyup.dPassword paste.dPassword", _keyUpHandler);
 			element.bind("select.dPassword focus.dPassword", _storeSelection);
 			if (options.switchToPasswordType) {
-				_input.bind("blur.dPassword", function() {deactivate(true);});		
+				_input.bind("blur.dPassword", function() {this.deactivate(true);});
 			}	
 		}
 	
 		function _storeSelection() {
 			if (_observing)	_previousSelection = _getFieldSelection(_input);
 		}
-	
+
 		function _cloakInput(keepRange) {
 			var selection = _getFieldSelection(_input);
 			var value = _input.val();
@@ -260,10 +263,13 @@
 				newInput = tempDiv.children();
 				registerHandlers(newInput);
 			}
-			
-			// update field
-			newInput.css('width', (_input.get(0).clientWidth - 2*parseInt(_input.get(0).currentStyle.padding, 10)) + "px");
-			newInput.css('height', (_input.get(0).clientHeight - 2*parseInt(_input.get(0).currentStyle.padding, 10)) + "px"); // fix different widths for password and text inputs in IE
+
+                        // IE9 fix.
+                        if (toType == "password" && $(newInput).attr('type') != 'password') {
+                          var marker = $('<span />').insertBefore(newInput);
+                          $(newInput).detach().attr('type', 'password').insertAfter(marker);
+                        }
+
 			var oldInput = _input;
 			oldInput.get(0).replaceNode(newInput.get(0));	// jQuery's replaceWith method gobbles the event handlers, apparently.
 			_input = newInput;
@@ -352,4 +358,4 @@
 		// TODO: Need to check OS? Windows key?
 		return (keyCode >= 9 && keyCode <= 20) || (keyCode >= 33 && keyCode <= 40) || keyCode == 224;
 	}
-})();
+}) (jQuery);
