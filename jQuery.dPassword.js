@@ -219,7 +219,7 @@
 			element.bind("keyup.dPassword paste.dPassword", _keyUpHandler);
 			element.bind("select.dPassword focus.dPassword", _storeSelection);
 			if (options.switchToPasswordType) {
-				_input.bind("blur.dPassword", function() {this.deactivate(true);});
+				_input.bind("blur.dPassword", function() {self.deactivate(true);});
 			}	
 		}
 	
