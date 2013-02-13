@@ -1,21 +1,18 @@
 /*******************************************************************************
- * dPassword v0.8 - delayed password masking (iPhone style)
- *                  jQuery plugin
+ * dPassword v0.8 - delayed password masking (iPhone style) jQuery plugin
  *
  * Usage:
  *    e.g. <code>$('input[type=password]').dPassword(options)</code>
  *    The options parameter is optional and can have the following optional entries:
- *        delay:					Number of seconds after which to hide input. Defaults to 1.
- *        observeForm:				Whether to automatically deactivate when parent form is submitted (default: true).
- *        form:						Form element different from parent form to observe for submitting (forces observeForm to true if set).
- *        cloakingCharacter:		Character to replace entered characters with. Defaults to the bullet (•).
- *        onChange:   				Handler when password has been changed.
- *        onStateChange:   			Handler when masking behaviour changes.
- *        switchToPasswordType:		Whether to switch input field back to password type on blur (looks bad in IE).
- *		  showIcon: 				Show a lock icon allowing the user to toggle masking behaviour (defaults to true).
- *									See further options
- * 										ICON_TITLE_ON, ICON_TITLE_OFF, ICON_PATH, ICON_STYLES, ICON_STYLES_ON, ICON_STYLES_OFF
- * 									for customization.
+ *        delay:                  Number of seconds after which to hide input. Defaults to 1.
+ *        observeForm:            Whether to automatically deactivate when parent form is submitted (default: true).
+ *        form:                   Form element different from parent form to observe for submitting (forces observeForm to true if set).
+ *        cloakingCharacter:      Character to replace entered characters with. Defaults to the bullet (•).
+ *        onChange:               Handler when password has been changed.
+ *        onStateChange:          Handler when masking behaviour changes.
+ *        switchToPasswordType:   Whether to switch input field back to password type on blur (looks bad in IE).
+ *        showIcon:               Show a lock icon allowing the user to toggle masking behaviour (defaults to true).
+ *    See further options ICON_TITLE_ON, ICON_TITLE_OFF, ICON_PATH, ICON_STYLES, ICON_STYLES_ON, ICON_STYLES_OFF for customization.
  *
  * Licensed under MIT License.
  *
