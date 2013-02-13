@@ -1,5 +1,5 @@
 /*******************************************************************************
- * dPassword v0.7 - delayed password masking (iPhone style)
+ * dPassword v0.8 - delayed password masking (iPhone style)
  *                  jQuery plugin
  *
  * Usage:
@@ -46,16 +46,17 @@
  *
  * @requires jQuery Library >= 1.3.2 (may work with older versions)
  */
-(function() {
+(function($) {
 	jQuery.fn.dPassword = function(options) {
-		
+
 		// support multiple elements
-	    if (this.length > 1) {
-	        this.each(function() {jQuery(this).dPassword(options);});
-	        return this;
-	    }
-    
-		var options = jQuery.extend(defaultOptions, options);
+		if (this.length > 1) {
+			this.each(function() {jQuery(this).dPassword(options);});
+			return this;
+		}
+
+		var _options;
+		var options = jQuery.extend(_options, defaultOptions, options);
 		this.options = options;
 		options.cloakingCharacter = options.cloakingCharacter.charAt(0);
 
@@ -199,6 +200,18 @@
 					newValue = _value.substring(0, sStart) + value.substring(sStart, selection[1]) + _value.substring(sEnd);
 				}
 				_value = newValue;
+
+				// Append separator in case of CPR number detected.
+				if (options.detect_cpr) {
+					if (_value.isCPRDate() && _value.search(options.separator) == -1 && keyCode.keyCode != 8) {
+						_value = _value + options.separator;
+						value = value + options.separator;
+						_input.val(value);
+						lengthDifference++;
+						selection = [6, 8, 0];
+					}
+				}
+
 				if (options.onChange) options.onChange(getValue());
 
 				if (_timeout) {
@@ -232,10 +245,11 @@
 		function _cloakInput(keepRange) {
 			var selection = _getFieldSelection(_input);
 			var value = _input.val();
+			var regexp = options.detect_cpr ? /[^\—]/g : /./g;
 			if (keepRange) {
-				_input.val(value.substring(0, keepRange[0] - 1 ).replace(/./g, options.cloakingCharacter) + value.substring(keepRange[0] - 1, keepRange[1]) + value.substring(keepRange[1]).replace(/./g, options.cloakingCharacter));
+				_input.val(value.substring(0, keepRange[0] - 1 ).replace(regexp, options.cloakingCharacter) + value.substring(keepRange[0] - 1, keepRange[1]) + value.substring(keepRange[1]).replace(regexp, options.cloakingCharacter));
 			} else {
-				_input.val(value.replace(/./g, options.cloakingCharacter));
+				_input.val(value.replace(regexp, options.cloakingCharacter));
 				if (_input.attr("type") != "text") {
 					if (jQuery.browser.msie) {
 						_switchInputTypeIE("text");
@@ -303,6 +317,8 @@
 		onChange: null,
 		onStateChange: null,
 		showIcon: true,
+		detect_cpr: true,
+		separator: unescape('%u2014'), // —
 		switchToPasswordType: !jQuery.browser.msie,		
 		/*
 		 * Default styles and behaviours for lock icon, see showIcon option.
@@ -358,4 +374,25 @@
 		// TODO: Need to check OS? Windows key?
 		return (keyCode >= 9 && keyCode <= 20) || (keyCode >= 33 && keyCode <= 40) || keyCode == 224;
 	}
+
+	// Check if first 6 chars of string is valid CPR number date.
+	String.prototype.isCPRDate = function () {
+		if (this.length < 6)
+			return false;
+
+		// CPR number schema: DDMMYY-SSSS
+		regexp = /^([0-3]{1}[0-9]{1})([0-1]{1}[0-9]{1})(\d{2})(.*)/
+		var date_parts = this.slice(0,6).match(regexp);
+
+		if (!date_parts)
+			return false;
+		if (date_parts[1] <= 0 || date_parts[1] > 31)
+			return false;
+		if (date_parts[2] <= 0 || date_parts[2] > 12)
+			return false;
+
+		var date = new Date(date_parts[3], date_parts[2], date_parts[1]);
+		return !isNaN(date.getTime()); // is date valid?
+	}
+
 }) (jQuery);
