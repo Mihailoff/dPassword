@@ -148,6 +148,11 @@
 					_storeSelection();
 					if (!keyCode) _cloakInput();
 					if (event.keyCode > 10) _keysDown[event.keyCode] = true;
+					
+					// Purge value when user holds backspace key
+                                        if (event.keyCode == 8 && !keyCode) {
+                                            _value = _value.substring(0, _value.length - 1);
+                                        }
 				} else {
 					_storeSelection();
 					if (_timeout) {
