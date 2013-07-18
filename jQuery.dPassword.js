@@ -21,22 +21,22 @@
  *                    Julian Dreissig,
  *                    George Mihailoff, http://george.mihailoff.com/
  *
- * Permission is hereby granted, free of charge, to any person obtaining 
- * a copy of this software and associated documentation files (the "Software"), 
- * to deal in the Software without restriction, including without limitation 
- * the rights to use, copy, modify, merge, publish, distribute, sublicense, 
- * and/or sell copies of the Software, and to permit persons to whom the 
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
  * Software is furnished to do so, subject to the following conditions:
  *
- * The above copyright notice and this permission notice shall be 
+ * The above copyright notice and this permission notice shall be
  * included in all copies or substantial portions of the Software.
  *
- * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, 
- * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES 
- * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. 
- * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, 
- * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR 
- * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR 
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+ * EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES
+ * OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
+ * IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM,
+ * DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR
+ * OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR
  * THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * Known Issues: - view will not follow cursor if textfield is too small.
@@ -68,13 +68,18 @@
 			_form = null,
 			_toggleIcon = null,
 			_keysDown = {},
-			_inputFieldTypes = {};
-			
+			_inputFieldTypes = {},
+			_lastChar = null;
+
 		// register event listeners
 		registerHandlers(_input);
 		if (options.observeForm || options.form) {
-			if (!_form) _form = options.form ? $(options.form) : _input.closest('form');
-			if (_form) _form.bind("submit.dPassword", function(){self.deactivate(true);});
+			if (!_form) {
+				_form = options.form ? $(options.form) : _input.closest('form');
+			}
+			if (_form) _form.bind("submit.dPassword", function(e){
+				self.deactivate(true);
+			});
 		}
 
 		// create/handle toggle icon
@@ -91,7 +96,7 @@
 		// TODO: public methods
 		// TODO: possible to overwrite val() to outside?
 
-                /**
+		/**
 		 * Switches to active mode. Will be automatically called on initialization.
 		 * Use getValue() to retrieve field value once activated.
 		 */
@@ -99,8 +104,12 @@
 			_observing = true;
 			_value = _input.val();
 			_cloakInput();
-			if (_toggleIcon) _switchToggleIcon(true);
-			if (options.onStateChange) options.onStateChange(_observing, this, _toggleIcon);
+			if (_toggleIcon) {
+				_switchToggleIcon(true);
+			}
+			if (options.onStateChange) {
+				options.onStateChange(_observing, this, _toggleIcon);
+			}
 		}
 
 		/**
@@ -114,9 +123,17 @@
 					clearTimeout(_timeout);
 					_timeout = null;
 				}
+
 				var selection = _getFieldSelection(_input);
 				jQuery.browser.msie ? _switchInputTypeIE("password") : _input.get(0).setAttribute("type", "password");	// override jQuery's behaviour
-				_input.val(getValue());
+				var value = getValue();
+				_input.val(value);
+
+				// Difference between lengths is one char.
+				if ((_previousInputValue.length - value.length) == 1) {
+					_input.val(value += _lastChar);
+				}
+
 				if (document.activeElement && document.activeElement == _input) _setFieldSelection(_input, selection);
 				if (temporarily !== true) {
 					_observing = false;
@@ -128,9 +145,9 @@
 
  		this.activate();
 		return this;
-		
+
 		// ------- method declarations follow ----------
-	
+
 		/**
 		 * Returns the current value of the password field.
 		 */
@@ -140,14 +157,27 @@
 
 		function _keyDownHandler(event) {
 			if (_observing) {
+				_lastChar = _input.val();
+				_lastChar = _lastChar.substring(_lastChar.length - 1, _lastChar.length);
+
 				if (!(_isSpecialKey(event.keyCode) || event.metaKey || event.ctrlKey)) {
 					var keyCode = null;
 					for (var keyCode in _keysDown) {
 						_afterInputHandler(keyCode);
 					}
 					_storeSelection();
-					if (!keyCode) _cloakInput();
-					if (event.keyCode > 10) _keysDown[event.keyCode] = true;
+					if (!keyCode) {
+						_cloakInput();
+					}
+					if (event.keyCode > 10) {
+						_keysDown[event.keyCode] = true;
+					}
+
+					// Purge value when user holds backspace key
+					if (event.keyCode == 8 && !keyCode) {
+						_value = _value.substring(0, _value.length - 1);
+					}
+
 				} else {
 					_storeSelection();
 					if (_timeout) {
@@ -158,15 +188,22 @@
 				}
 			}
 		}
-	
+
 		function _keyUpHandler(event) {
 			if (_observing) {
 				if (event.type == "paste") {
 					setTimeout(_afterInputHandler, 0);
 					return;
 				}
-		    	if (_isSpecialKey(event.keyCode) || event.metaKey || event.ctrlKey) return;
-				if (_keysDown[event.keyCode] || event.keyCode < 11) _afterInputHandler(event);
+				if (_isSpecialKey(event.keyCode) || event.metaKey || event.ctrlKey) {
+					return;
+				}
+				if (_keysDown[event.keyCode] || event.keyCode < 11) {
+					_afterInputHandler(event);
+					return;
+				}
+
+				throw 'Unrecogized key code';
 			} else {
 				var value = _input.val();
 				if (value != _previousInputValue) {
@@ -202,10 +239,11 @@
 				if (options.detect_cpr) {
 					if (_value.isCPRDate() && _value.search(options.separator) == -1 && keyCode.keyCode != 8) {
 						_value = _value + options.separator;
-						value = value + options.separator;
+						value = value.replace(options.separator, '');
+						value = value.substring(0, 6) + options.separator + value.substring(6);
 						_input.val(value);
 						lengthDifference++;
-						selection = [6, 8, 0];
+						selection = [6, value.length, 0];
 					}
 				}
 
@@ -225,16 +263,16 @@
 				_previousSelection = selection;
 			}
 		}
-				
+
 		function registerHandlers(element) {
 			element.bind("keydown.dPassword", _keyDownHandler);
 			element.bind("keyup.dPassword paste.dPassword", _keyUpHandler);
 			element.bind("select.dPassword focus.dPassword", _storeSelection);
 			if (options.switchToPasswordType) {
 				_input.bind("blur.dPassword", function() {self.deactivate(true);});
-			}	
+			}
 		}
-	
+
 		function _storeSelection() {
 			if (_observing)	_previousSelection = _getFieldSelection(_input);
 		}
@@ -259,7 +297,7 @@
 			if (document.activeElement && document.activeElement == _input.get(0)) _setFieldSelection(_input, selection);
 			_previousInputValue = _input.val();
 		}
-	
+
 
 		function _switchInputTypeIE(toType) {
 			// create input field (or retrieve from cache) with new type
@@ -275,11 +313,11 @@
 				registerHandlers(newInput);
 			}
 
-                        // IE9 fix.
-                        if (toType == "password" && $(newInput).attr('type') != 'password') {
-                          var marker = $('<span />').insertBefore(newInput);
-                          $(newInput).detach().attr('type', 'password').insertAfter(marker);
-                        }
+			// IE9 fix.
+			if (toType == "password" && $(newInput).attr('type') != 'password') {
+				var marker = $('<span />').insertBefore(newInput);
+				$(newInput).detach().attr('type', 'password').insertAfter(marker);
+			}
 
 			var oldInput = _input;
 			oldInput.get(0).replaceNode(newInput.get(0));	// jQuery's replaceWith method gobbles the event handlers, apparently.
@@ -305,18 +343,18 @@
 			}
 		}
 	};
-	
+
 	var defaultOptions = {
 		delay: 1,
-		observeForm: true,					 
-		form: null,							 
-		cloakingCharacter: (navigator.platform == "MacIntel") ? '\u2022' : '\u25CF',		 
+		observeForm: true,
+		form: null,
+		cloakingCharacter: (navigator.platform == "MacIntel") ? '\u2022' : '\u25CF',
 		onChange: null,
 		onStateChange: null,
 		showIcon: true,
 		detect_cpr: true,
 		separator: unescape('%u2014'), // —
-		switchToPasswordType: !jQuery.browser.msie,		
+		switchToPasswordType: !jQuery.browser.msie,
 		/*
 		 * Default styles and behaviours for lock icon, see showIcon option.
 		 * Override at will.
@@ -339,7 +377,7 @@
 			backgroundPosition: "0 -16px"
 		}
 	};
-	
+
 	function _getFieldSelection(element) {
 		if (document.selection) {
 			var range = document.selection.createRange();
@@ -352,7 +390,7 @@
 			return [el.selectionStart, el.selectionEnd, el.selectionEnd - el.selectionStart];
 		}
 	}
-	
+
 	function _setFieldSelection(element, selection) {
 		var el = element.get(0);
 		if (document.selection) {
@@ -366,7 +404,7 @@
 			el.selectionEnd = selection[1];
 		}
 	}
-	
+
 	function _isSpecialKey(keyCode) {
 		// TODO: Need to check OS? Windows key?
 		return (keyCode >= 9 && keyCode <= 20) || (keyCode >= 33 && keyCode <= 40) || keyCode == 224;
@@ -378,7 +416,7 @@
 			return false;
 
 		// CPR number schema: DDMMYY-SSSS
-		regexp = /^([0-3]{1}[0-9]{1})([0-1]{1}[0-9]{1})(\d{2})(.*)/
+		regexp = /^([0-3]{1}[0-9]{1})([0-1]{1}[0-9]{1})(\d{2})$/
 		var date_parts = this.slice(0,6).match(regexp);
 
 		if (!date_parts)
